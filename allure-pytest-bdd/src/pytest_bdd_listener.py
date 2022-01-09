@@ -13,6 +13,7 @@ from .utils import get_uuid
 from .utils import get_step_name
 from .utils import get_status_details
 from .utils import get_pytest_report_status
+from .utils import get_package, pytest_markers
 from allure_commons.model2 import StatusDetails
 from functools import partial
 from allure_commons.lifecycle import AllureLifecycle
@@ -48,6 +49,10 @@ class PytestBDDListener(object):
             test_result.labels.append(Label(name=LabelType.FRAMEWORK, value="pytest-bdd"))
             test_result.labels.append(Label(name=LabelType.LANGUAGE, value=platform_label()))
             test_result.labels.append(Label(name=LabelType.FEATURE, value=feature.name))
+            test_result.labels.append(Label(name=LabelType.PARENT_SUITE, value=full_name))
+            test_result.labels.append(Label(name=LabelType.SUITE, value=name))
+            test_result.labels.append(Label(name='package', value=get_package(request.node)))
+            test_result.labels.extend([Label(name=LabelType.TAG, value=value) for value in pytest_markers(request.node)])
             test_result.parameters = get_params(request.node)
 
         finalizer = partial(self._scenario_finalizer, scenario)
