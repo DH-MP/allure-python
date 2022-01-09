@@ -78,7 +78,7 @@ def mark_to_str(marker):
     args = [represent(arg) for arg in marker.args]
     kwargs = ['{name}={value}'.format(name=key, value=represent(marker.kwargs[key])) for key in marker.kwargs]
     skip_markers = ('usefixtures')
-    builtin_pytest_markers = ('filterwarnings', 'skip', 'skipif', 'xfail', 'tryfirst', 'trylast', 'XRAY')
+    builtin_pytest_markers = ('filterwarnings', 'skip', 'skipif', 'xfail', 'tryfirst', 'trylast', 'xray')
     if marker.name in skip_markers:
         return None
     if marker.name in builtin_pytest_markers:
