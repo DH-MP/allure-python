@@ -1,11 +1,12 @@
 import pytest
 import allure_commons
+import warnings
 from allure_commons.utils import now
 from allure_commons.utils import uuid4
 from allure_commons.model2 import Label
 from allure_commons.model2 import Status
 
-from allure_commons.types import LabelType
+from allure_commons.types import LabelType, AttachmentType
 from allure_commons.utils import platform_label
 from allure_commons.utils import host_tag, thread_tag
 from allure_commons.utils import md5
@@ -76,6 +77,7 @@ class PytestBDDListener(object):
         uuid = get_uuid(str(id(step)))
         with self.lifecycle.update_step(uuid=uuid) as step_result:
             step_result.status = Status.PASSED
+            self._attach_screenshot_after_step(uuid, step_func_args)
         self.lifecycle.stop_step(uuid=uuid)
 
     @pytest.hookimpl
@@ -84,6 +86,7 @@ class PytestBDDListener(object):
         with self.lifecycle.update_step(uuid=uuid) as step_result:
             step_result.status = Status.FAILED
             step_result.statusDetails = get_status_details(exception)
+            self._attach_screenshot_after_step(uuid, step_func_args)
         self.lifecycle.stop_step(uuid=uuid)
 
     @pytest.hookimpl
@@ -130,3 +133,22 @@ class PytestBDDListener(object):
     @allure_commons.hookimpl
     def attach_file(self, source, name, attachment_type, extension):
         self.lifecycle.attach_file(uuid4(), source, name=name, attachment_type=attachment_type, extension=extension)
+
+
+    def _attach_screenshot_after_step(self, uuid, step_func_args):
+        driver_instance = None
+        if step_func_args:
+            for arg in step_func_args.keys():
+                if 'driver' == arg or "_driver" in arg:
+                    driver_instance = step_func_args.get(arg)
+
+        screenshot_png = None
+        if driver_instance:
+            try:
+                screenshot_png = driver_instance.driver.get_screenshot_as_png()
+            except:
+                Warning("Allure-Pytest-BDD: Failed to capture screenshot for test.")
+                pass # Do not fail step on failed screenshot
+        if screenshot_png:
+            self.lifecycle.attach_data(uuid, screenshot_png, name="Screenshot", attachment_type=AttachmentType.PNG,
+                                       extension=".png")
