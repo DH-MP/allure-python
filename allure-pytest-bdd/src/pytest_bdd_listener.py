@@ -77,7 +77,7 @@ class PytestBDDListener(object):
         uuid = get_uuid(str(id(step)))
         with self.lifecycle.update_step(uuid=uuid) as step_result:
             step_result.status = Status.PASSED
-            self._attach_screenshot_after_step(uuid, step_func, step_func_args)
+            self._attach_screenshot_after_step(request, uuid, step_func, step_func_args)
         self.lifecycle.stop_step(uuid=uuid)
 
     @pytest.hookimpl
@@ -86,7 +86,7 @@ class PytestBDDListener(object):
         with self.lifecycle.update_step(uuid=uuid) as step_result:
             step_result.status = Status.FAILED
             step_result.statusDetails = get_status_details(exception)
-            self._attach_screenshot_after_step(uuid, step_func, step_func_args)
+            self._attach_screenshot_after_step(request, uuid, step_func, step_func_args)
         self.lifecycle.stop_step(uuid=uuid)
 
     @pytest.hookimpl
@@ -139,9 +139,11 @@ class PytestBDDListener(object):
         self.lifecycle.attach_file(uuid4(), source, name=name, attachment_type=attachment_type, extension=extension)
 
 
-    def _attach_screenshot_after_step(self, uuid, step_func, step_func_args):
+    def _attach_screenshot_after_step(self, request, uuid, step_func, step_func_args):
         driver_instance = None
-        if step_func_args:
+        if request and "driver" in request.fixturenames:
+            driver_instance = request.getfixturevalue("driver")
+        elif step_func_args:
             for arg in step_func_args.keys():
                 if 'driver' == arg or "_driver" in arg:
                     driver_instance = step_func_args.get(arg)
