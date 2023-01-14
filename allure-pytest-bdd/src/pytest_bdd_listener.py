@@ -1,3 +1,5 @@
+import base64
+
 import pytest
 import allure_commons
 import warnings
@@ -77,7 +79,7 @@ class PytestBDDListener(object):
         uuid = get_uuid(str(id(step)))
         with self.lifecycle.update_step(uuid=uuid) as step_result:
             step_result.status = Status.PASSED
-            self._attach_screenshot_after_step(request, uuid, step_func, step_func_args)
+            self._attach_screenshot_after_step(uuid, step_func, step_func_args)
         self.lifecycle.stop_step(uuid=uuid)
 
     @pytest.hookimpl
@@ -86,7 +88,7 @@ class PytestBDDListener(object):
         with self.lifecycle.update_step(uuid=uuid) as step_result:
             step_result.status = Status.FAILED
             step_result.statusDetails = get_status_details(exception)
-            self._attach_screenshot_after_step(request, uuid, step_func, step_func_args)
+            self._attach_screenshot_after_step(uuid, step_func, step_func_args)
         self.lifecycle.stop_step(uuid=uuid)
 
     @pytest.hookimpl
@@ -138,28 +140,25 @@ class PytestBDDListener(object):
     def attach_file(self, source, name, attachment_type, extension):
         self.lifecycle.attach_file(uuid4(), source, name=name, attachment_type=attachment_type, extension=extension)
 
-
-    def _attach_screenshot_after_step(self, request, uuid, step_func, step_func_args):
-        driver_instance = None
-        if request and "driver" in request.fixturenames:
-            driver_instance = request.getfixturevalue("driver")
-        elif step_func_args:
+    def _attach_screenshot_after_step(self, uuid, step_func, step_func_args):
+        page_instance = None
+        if step_func_args:
             for arg in step_func_args.keys():
-                if 'driver' == arg or "_driver" in arg:
-                    driver_instance = step_func_args.get(arg)
+                if arg in ["scenario_page", "feature_page", "session_page"]:
+                    page_instance = step_func_args.get(arg)
 
-                if not driver_instance:
+                if not page_instance:
                     arg_obj = step_func_args.get(arg)
-                    if hasattr(arg_obj, "driver"):
-                        driver_instance = getattr(arg_obj, "driver")
+                    if hasattr(arg_obj, "session_page"):
+                        page_instance = getattr(arg_obj, "session_page")
 
-        screenshot_png = None
-        if driver_instance:
+        screenshot = None
+        if page_instance:
             try:
-                screenshot_png = driver_instance.driver.get_screenshot_as_png()
+                screenshot = page_instance.screenshot()
             except:
                 Warning("Allure-Pytest-BDD: Failed to capture screenshot for test.")
-                pass # Do not fail step on failed screenshot
-        if screenshot_png:
-            self.lifecycle.attach_data(uuid, screenshot_png, name="Screenshot", attachment_type=AttachmentType.PNG,
+                pass  # Do not fail step on failed screenshot
+        if screenshot:
+            self.lifecycle.attach_data(uuid, screenshot, name="Screenshot", attachment_type=AttachmentType.PNG,
                                        extension=".png")
