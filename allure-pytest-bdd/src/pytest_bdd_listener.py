@@ -92,10 +92,6 @@ class PytestBDDListener(object):
         self.lifecycle.stop_step(uuid=uuid)
 
     @pytest.hookimpl
-    def pytest_bdd_step_validation_error(self, request, feature, scenario, step, step_func, step_func_args, exception):
-        self.pytest_bdd_step_error(request, feature, scenario, step, step_func, step_func_args, exception)
-
-    @pytest.hookimpl
     def pytest_bdd_step_func_lookup_error(self, request, feature, scenario, step, exception):
         uuid = get_uuid(str(id(step)))
         with self.lifecycle.update_step(uuid=uuid) as step_result:
