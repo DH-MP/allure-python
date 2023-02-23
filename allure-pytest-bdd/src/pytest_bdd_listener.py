@@ -140,21 +140,24 @@ class PytestBDDListener(object):
         page_instance = None
         if step_func_args:
             for arg in step_func_args.keys():
-                if arg in ["scenario_page", "feature_page", "session_page"]:
-                    page_instance = step_func_args.get(arg)
+                browser_context_fixture_names = ['session_browser_context']
+                if arg in browser_context_fixture_names:
+                    browser_context = step_func_args.get(arg)
 
-                if not page_instance:
+                if not browser_context:
                     arg_obj = step_func_args.get(arg)
-                    if hasattr(arg_obj, "session_page"):
-                        page_instance = getattr(arg_obj, "session_page")
+                    for name in browser_context_fixture_names:
+                        if hasattr(arg_obj, name):
+                            browser_context = getattr(arg_obj, name)
 
-        screenshot = None
-        if page_instance:
-            try:
-                screenshot = page_instance.screenshot()
-            except:
-                Warning("Allure-Pytest-BDD: Failed to capture screenshot for test.")
-                pass  # Do not fail step on failed screenshot
-        if screenshot:
-            self.lifecycle.attach_data(uuid, screenshot, name="Screenshot", attachment_type=AttachmentType.PNG,
-                                       extension=".png")
+        if browser_context:
+            for page_instance in browser_context.pages:
+                screenshot = None
+                try:
+                    screenshot = page_instance.screenshot()
+                except:
+                    Warning("Allure-Pytest-BDD: Failed to capture screenshot for test.")
+                    pass  # Do not fail step on failed screenshot
+                if screenshot:
+                    self.lifecycle.attach_data(uuid, screenshot, name=str(uuid4()), attachment_type=AttachmentType.PNG,
+                                               extension=".png")
