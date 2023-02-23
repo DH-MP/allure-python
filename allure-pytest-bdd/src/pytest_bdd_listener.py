@@ -79,16 +79,17 @@ class PytestBDDListener(object):
         uuid = get_uuid(str(id(step)))
         with self.lifecycle.update_step(uuid=uuid) as step_result:
             step_result.status = Status.PASSED
-            self._attach_screenshot_after_step(uuid, step_func, step_func_args)
+            self._attach_screenshot_after_step(uuid, request)
         self.lifecycle.stop_step(uuid=uuid)
 
     @pytest.hookimpl
     def pytest_bdd_step_error(self, request, feature, scenario, step, step_func, step_func_args, exception):
         uuid = get_uuid(str(id(step)))
+
         with self.lifecycle.update_step(uuid=uuid) as step_result:
             step_result.status = Status.FAILED
             step_result.statusDetails = get_status_details(exception)
-            self._attach_screenshot_after_step(uuid, step_func, step_func_args)
+            self._attach_screenshot_after_step(uuid, request)
         self.lifecycle.stop_step(uuid=uuid)
 
     @pytest.hookimpl
@@ -136,23 +137,18 @@ class PytestBDDListener(object):
     def attach_file(self, source, name, attachment_type, extension):
         self.lifecycle.attach_file(uuid4(), source, name=name, attachment_type=attachment_type, extension=extension)
 
-    def _attach_screenshot_after_step(self, uuid, step_func, step_func_args):
-        page_instance = None
-        browser_context = None
-        if step_func_args:
-            for arg in step_func_args.keys():
-                browser_context_fixture_names = ['session_browser_context']
-                if arg in browser_context_fixture_names:
-                    browser_context = step_func_args.get(arg)
+    def _attach_screenshot_after_step(self, uuid, request):
+        playwright_browser_fixture_name = 'browser'
+        browser = None
+        if request is not None:
+            if playwright_browser_fixture_name in request.fixturenames:
+                browser = request.getfixturevalue(playwright_browser_fixture_name)
 
-                if not browser_context:
-                    arg_obj = step_func_args.get(arg)
-                    for name in browser_context_fixture_names:
-                        if hasattr(arg_obj, name):
-                            browser_context = getattr(arg_obj, name)
+        if not browser:
+            return
 
-        if browser_context:
-            for page_instance in browser_context.pages:
+        for context in browser.contexts:
+            for page_instance in context.pages:
                 screenshot = None
                 try:
                     screenshot = page_instance.screenshot()
