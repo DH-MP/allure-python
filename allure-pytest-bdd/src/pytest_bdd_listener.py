@@ -138,6 +138,7 @@ class PytestBDDListener(object):
 
     def _attach_screenshot_after_step(self, uuid, step_func, step_func_args):
         page_instance = None
+        browser_context = None
         if step_func_args:
             for arg in step_func_args.keys():
                 browser_context_fixture_names = ['session_browser_context']
