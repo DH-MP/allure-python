@@ -156,5 +156,6 @@ class PytestBDDListener(object):
                     Warning("Allure-Pytest-BDD: Failed to capture screenshot for test.")
                     pass  # Do not fail step on failed screenshot
                 if screenshot:
-                    self.lifecycle.attach_data(uuid, screenshot, name=str(uuid4()), attachment_type=AttachmentType.PNG,
-                                               extension=".png")
+                    screenshot_uuid = str(uuid4())
+                    self.lifecycle.attach_data(screenshot_uuid, screenshot, name=screenshot_uuid, attachment_type=AttachmentType.PNG,
+                                               extension=".png", parent_uuid=uuid)
