@@ -65,6 +65,18 @@ class PytestBDDListener(object):
     def pytest_bdd_after_scenario(self, request, feature, scenario):
         uuid = get_uuid(request.node.nodeid)
         with self.lifecycle.update_test_case(uuid=uuid) as test_result:
+            knowndefects = next(
+                (value for value in pytest_markers(request.node) if value.lower().startswith("knowndefect:")),
+                None
+            )
+            failed_step = next((step for step in test_result.steps if step.status != Status.PASSED), None)
+            if knowndefects is not None and failed_step:
+                for label in test_result.labels:
+                    if label.name == LabelType.PARENT_SUITE:
+                        test_result.labels.remove(label)
+                        break
+                test_result.labels.append(Label(name=LabelType.PARENT_SUITE, value="KnownIssues"))
+                test_result.name = test_result.name + " [KNOWN]"
             test_result.stop = now()
 
     @pytest.hookimpl
